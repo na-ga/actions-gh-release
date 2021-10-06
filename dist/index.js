@@ -426,6 +426,9 @@ function run() {
             if (event !== 'push' && event !== 'pull_request') {
                 throw Error(`This action does not support ${event} event`);
             }
+            core.setOutput('event_id', github.context.runId);
+            core.setOutput('event_name', github.context.eventName);
+            core.setOutput('event_happened_at', new Date().toISOString());
             let workingDir = process.env['GITHUB_WORKSPACE'];
             if (!workingDir) {
                 throw new Error('GITHUB_WORKSPACE was not defined');
