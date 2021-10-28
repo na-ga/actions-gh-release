@@ -140,7 +140,9 @@ func main() {
 		log.Fatalf("Failed to marshal releases: %v\n", err)
 	}
 	if args.EscapeOutputReleasesJSON {
-		releasesJSON = []byte(strings.ReplaceAll(string(releasesJSON), "\"", "\\\""))
+		escaped := strings.ReplaceAll(string(releasesJSON), "\\", "\\\\")
+		escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+		releasesJSON = []byte(escaped)
 	}
 	fmt.Printf("::set-output name=releases::%s\n", string(releasesJSON))
 
