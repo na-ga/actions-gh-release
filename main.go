@@ -139,6 +139,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to marshal releases: %v\n", err)
 	}
+	if args.EscapeOutputReleasesJSON {
+		releasesJSON = []byte(strings.ReplaceAll(string(releasesJSON), "\"", "\\\""))
+	}
 	fmt.Printf("::set-output name=releases::%s\n", string(releasesJSON))
 
 	// Create GitHub releases if the event was push.
@@ -166,8 +169,9 @@ func main() {
 }
 
 type arguments struct {
-	ReleaseFile string
-	Token       string
+	ReleaseFile              string
+	Token                    string
+	EscapeOutputReleasesJSON bool
 }
 
 func parseArgs(args []string) (arguments, error) {
@@ -183,6 +187,8 @@ func parseArgs(args []string) (arguments, error) {
 			out.ReleaseFile = ps[1]
 		case "token":
 			out.Token = ps[1]
+		case "escape-output-releases-json":
+			out.EscapeOutputReleasesJSON = ps[1] == "true"
 		}
 	}
 
