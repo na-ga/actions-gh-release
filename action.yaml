@@ -13,6 +13,10 @@ inputs:
   token:
     description: 'The GITHUB_TOKEN secret.'
     required: true
+  escape_output_releases_json:
+    description: 'Whether to escape output releases json.'
+    required: false
+    default: 'false'
 
 outputs:
   releases:
@@ -24,3 +28,4 @@ runs:
   args:
     - release-file=${{ inputs.release_file }}
     - token=${{ inputs.token }}
+    - escape-output-releases-json=${{ inputs.escape_output_releases_json }}
