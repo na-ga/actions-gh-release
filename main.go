@@ -78,11 +78,13 @@ func main() {
 	}
 
 	changedReleaseFiles := make([]string, 0, 0)
+	log.Printf("DEBUG: args.ReleaseFile=%s\n", args.ReleaseFile)
 	matcher, err := NewPatternMatcher([]string{args.ReleaseFile})
 	if err != nil {
 		log.Fatalf("Failed to create pattern matcher for release file: %v\n", err)
 	}
 	for _, f := range changedFiles {
+		log.Printf("DEBUG: changedFile=%s, match=%t\n", f, matcher.Matches(f))
 		if matcher.Matches(f) {
 			changedReleaseFiles = append(changedReleaseFiles, f)
 		}
