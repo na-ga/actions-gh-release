@@ -253,6 +253,7 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 		}
 	}
 
+	fmt.Printf("## DEBUG ## commit list length = %d\n", len(commits))
 	out := make([]ReleaseCommit, 0, len(commits))
 	for _, commit := range commits {
 
@@ -266,6 +267,7 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 			continue
 		}
 
+		fmt.Printf("## DEBUG ## subject = %sm hash = %s\n", commit.Subject, commit.Hash)
 		c := ReleaseCommit{
 			Commit:       commit,
 			ReleaseNote:  extractReleaseNote(commit.Subject, commit.Body, gen.UseReleaseNoteBlock),
@@ -275,9 +277,11 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 		if gen.UsePullRequestMetadata {
 			prNumber, ok := commit.PullRequestNumber()
 			if !ok {
+				fmt.Printf("## DEBUG ## subject = %sm hash = %s, prNumber = NULL\n", commit.Subject, commit.Hash)
 				continue
 			}
 			c.PullRequestNumber = prNumber
+			fmt.Printf("## DEBUG ## subject = %sm hash = %s, prNumber = %d\n", commit.Subject, commit.Hash, prNumber)
 
 			var err error
 			pr, ok := prs[prNumber]
@@ -285,6 +289,7 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 				pr, err = ghClient.getPullRequest(ctx, event.Owner, event.Repo, prNumber)
 			}
 			if err != nil {
+				fmt.Printf("## DEBUG ## subject = %sm hash = %s, prNumber = %d, failed to get PR\n", commit.Subject, commit.Hash, prNumber)
 				return nil, err
 			}
 			c.PullRequestOwner = pr.GetUser().GetLogin()
@@ -293,6 +298,7 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 
 		out = append(out, c)
 	}
+	fmt.Printf("## DEBUG ## release commit list length = %d\n", len(out))
 	return out, nil
 }
 
