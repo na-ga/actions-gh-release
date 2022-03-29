@@ -235,7 +235,8 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 	}
 
 	gen, limit := cfg.ReleaseNoteGenerator, 1000
-	prs := make(map[int]*github.PullRequest, limit)
+	shaPRs := make(map[string]*github.PullRequest, limit)
+	numPRs := make(map[int]*github.PullRequest, limit)
 	if gen.UsePullRequestMetadata {
 		opts := &ListPullRequestOptions{
 			State:     PullRequestStateClosed,
@@ -248,9 +249,37 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 			return nil, err
 		}
 		for i := range v {
+			sha := *v[i].MergeCommitSHA
+			shaPRs[sha] = v[i]
 			number := *v[i].Number
-			prs[number] = v[i]
+			numPRs[number] = v[i]
 		}
+	}
+
+	getPullRequest := func(commit Commit) (*github.PullRequest, error) {
+		if !commit.IsMerge() {
+			return nil, nil
+		}
+		if pr, ok := shaPRs[commit.Hash]; ok {
+			fmt.Printf("## DEBUG ## HIT PR BY SHA: subject = %s, hash = %s, prNumber = %d\n", commit.Subject, commit.Hash, pr.GetNumber())
+			return pr, nil
+		}
+		prNumber, ok := commit.PullRequestNumber()
+		if !ok {
+			fmt.Printf("## DEBUG ## subject = %s, hash = %s, prNumber = NULL\n", commit.Subject, commit.Hash)
+			return nil, nil
+		}
+		if pr, ok := numPRs[prNumber]; ok {
+			fmt.Printf("## DEBUG ## HIT PR BY NUM: subject = %s, hash = %s, prNumber = %d\n", commit.Subject, commit.Hash, pr.GetNumber())
+			return pr, nil
+		}
+		pr, err := ghClient.getPullRequest(ctx, event.Owner, event.Repo, prNumber)
+		if err != nil {
+			fmt.Printf("## DEBUG ## subject = %s, hash = %s, prNumber = %d, failed to get PR because %s\n", commit.Subject, commit.Hash, prNumber, err.Error())
+			return nil, err
+		}
+		fmt.Printf("## DEBUG ## HIT PR BY API: subject = %s, hash = %s, prNumber = %d\n", commit.Subject, commit.Hash, pr.GetNumber())
+		return pr, nil
 	}
 
 	fmt.Printf("## DEBUG ## commit list length = %d\n", len(commits))
@@ -267,7 +296,7 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 			continue
 		}
 
-		fmt.Printf("## DEBUG ## subject = %sm hash = %s\n", commit.Subject, commit.Hash)
+		fmt.Printf("## DEBUG ## subject = %s, hash = %s\n", commit.Subject, commit.Hash)
 		c := ReleaseCommit{
 			Commit:       commit,
 			ReleaseNote:  extractReleaseNote(commit.Subject, commit.Body, gen.UseReleaseNoteBlock),
@@ -275,25 +304,15 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 		}
 
 		if gen.UsePullRequestMetadata {
-			prNumber, ok := commit.PullRequestNumber()
-			if !ok {
-				fmt.Printf("## DEBUG ## subject = %sm hash = %s, prNumber = NULL\n", commit.Subject, commit.Hash)
-				continue
-			}
-			c.PullRequestNumber = prNumber
-			fmt.Printf("## DEBUG ## subject = %sm hash = %s, prNumber = %d\n", commit.Subject, commit.Hash, prNumber)
-
-			var err error
-			pr, ok := prs[prNumber]
-			if !ok {
-				pr, err = ghClient.getPullRequest(ctx, event.Owner, event.Repo, prNumber)
-			}
+			pr, err := getPullRequest(commit)
 			if err != nil {
-				fmt.Printf("## DEBUG ## subject = %sm hash = %s, prNumber = %d, failed to get PR\n", commit.Subject, commit.Hash, prNumber)
 				return nil, err
 			}
-			c.PullRequestOwner = pr.GetUser().GetLogin()
-			c.ReleaseNote = extractReleaseNote(pr.GetTitle(), pr.GetBody(), gen.UseReleaseNoteBlock)
+			if pr != nil {
+				c.PullRequestNumber = pr.GetNumber()
+				c.PullRequestOwner = pr.GetUser().GetLogin()
+				c.ReleaseNote = extractReleaseNote(pr.GetTitle(), pr.GetBody(), gen.UseReleaseNoteBlock)
+			}
 		}
 
 		out = append(out, c)
