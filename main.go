@@ -130,6 +130,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to marshal releases: %v\n", err)
 	}
+	fmt.Printf("## DEBUG ## ::set-output name=releases::%s\n", string(releasesJSON))
 	fmt.Printf("::set-output name=releases::%s\n", string(releasesJSON))
 	if args.OutputReleasesFilePath != "" {
 		if err := os.WriteFile(args.OutputReleasesFilePath, releasesJSON, 0644); err != nil {
