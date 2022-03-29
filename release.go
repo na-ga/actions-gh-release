@@ -258,6 +258,7 @@ func buildReleaseCommits(ctx context.Context, ghClient *githubClient, commits []
 
 	getPullRequest := func(commit Commit) (*github.PullRequest, error) {
 		if !commit.IsMerge() {
+			fmt.Printf("## DEBUG ## IGNORE BECASE NOT MERGE COMMIT: subject = %s, hash = %s\n", commit.Subject, commit.Hash)
 			return nil, nil
 		}
 		if pr, ok := shaPRs[commit.Hash]; ok {
